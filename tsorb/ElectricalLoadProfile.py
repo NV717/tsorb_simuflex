@@ -18,6 +18,7 @@ class ElectricalLoadProfile(object):
         get_hot_water=False,
         freq="60min",
         resample_mean=False,
+        holidays=None,
     ):
         """
         Initializes an Electrical LoadProfile Model with the given Data.
@@ -60,6 +61,7 @@ class ElectricalLoadProfile(object):
         self.get_hot_water = get_hot_water
         self.freq = freq
         self.resample_mean = resample_mean
+        self.holidays = holidays if holidays is not None else []
 
         if residents > 5:
             raise ValueError('maximum number of "residents" is 5')
@@ -119,7 +121,7 @@ class ElectricalLoadProfile(object):
         """
         np.random.seed(seed)
 
-    def run_for_year(self, year):
+    def run_for_year(self, year, holidays = []):
         """
         Repetetively starts the run function for an Electrical Load Profile for
         each day in the chosen year. It will automatically start the run for
@@ -128,6 +130,8 @@ class ElectricalLoadProfile(object):
         Parameters:
             year: int, required
                 Set the year in which the Calculation should take place
+            holidays: optional
+                Expects a list with julian dayofyear entries like from OpenDHW.getholidays
         -----------------------------------------------------------------------
         Returns:
             totalLoad: numpy array
@@ -168,13 +172,18 @@ class ElectricalLoadProfile(object):
             )
             app_names = [load.get_key for load in self.app_model.loads]
 
+        days = pd.date_range(start=str(year), end=str(int(year) + 1), freq="D", tz="Europe/Berlin")[:-1]
+        self.days = days  # new: keep for post-hoc inspection
+        self.day_types = []
+
         # Loop through every day in the chosen year
         for ii, day in enumerate(days):
             # Differentiate between weekday or weekendday
-            if day.dayofweek in (5, 6):
+            if day.dayofweek in (5, 6) or day.dayofyear in holidays:
                 day_of_week = "we"
             else:
                 day_of_week = "wd"
+            self.day_types.append(day_of_week)
 
             # calculate dynamic factor for seasonal correction
             f = sum(coeff * (day.dayofyear ** pot) for pot, coeff in enumerate(z[::-1]))
@@ -229,7 +238,7 @@ class ElectricalLoadProfile(object):
         as pandas.DataFrame
         """
         if not self._run_for_year == year:
-            self.run_for_year(year)
+            self.run_for_year(year, holidays=self.holidays)
 
         if self.resolved_load:
             if self.resample_mean:
@@ -291,5 +300,8 @@ class ElectricalLoadProfile(object):
                 profiles["HotWater"] = (
                     pd.Series(self.hotWater, index=index_1).resample(self.freq).ffill()
                 )
+
+            profiles["OccActive"] = profiles["OccActive"].ffill()
+            profiles["OccNotActive"] = profiles["OccNotActive"].ffill()
 
             return profiles

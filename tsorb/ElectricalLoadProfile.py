@@ -78,6 +78,10 @@ class ElectricalLoadProfile(object):
 
         self._run_for_year = True
 
+    @property
+    def owned_appliances(self):
+        return self.app_model.get_owned_appliances()
+
     def run(self, year, day_of_week, day_in_year):
         """
         Runs an Electrical Load Profile Object for the given year and type of
@@ -121,7 +125,7 @@ class ElectricalLoadProfile(object):
         """
         np.random.seed(seed)
 
-    def run_for_year(self, year, holidays = []):
+    def run_for_year(self, year, holidays = None):
         """
         Repetetively starts the run function for an Electrical Load Profile for
         each day in the chosen year. It will automatically start the run for
@@ -142,6 +146,9 @@ class ElectricalLoadProfile(object):
         days = pd.date_range(
             start=str(year), end=str(int(year) + 1), freq="D", tz="Europe/Berlin"
         )[:-1]
+        # make sure that self.holidays is actually forwarded
+        if holidays is None:
+            holidays = self.holidays
 
         number_days_in_year = len(days)
         # build an empty numpy array to later save the total_consumption

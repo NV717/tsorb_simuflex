@@ -286,6 +286,9 @@ class AppliancesModel(object):
             )
         return appliances
 
+    def get_owned_appliances(self):
+        return [a.get_key for a in self.loads if a.owned if a.type_name != "Water heating"]
+
     def _group_loads_by_type(self):
         self.pd_app_type_loads = pd.DataFrame(
             data=np.zeros((1440, 9)),

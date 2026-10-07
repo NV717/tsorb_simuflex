@@ -99,14 +99,10 @@ class OccupancyModel(object):
         states[0] = state
 
         # loop over whole day
-        #changed it so there is fallback when the transition probability doesnt occur
         for interval in range(0, 144):
-            row = act_transition[num_row_jump * interval + state, 2:].astype(float)
-            if row.sum() == 0:
-                pass
-            else:
-                dpd = DPD(row)
-                state = dpd.get_random_interval()
+            row = act_transition[num_row_jump * interval + state, 2:]
+            dpd = DPD(row)
+            state = dpd.get_random_interval()
             states[interval] = state
 
         # save results
